@@ -7,47 +7,112 @@ var items = {};
 
 // Public API - Fix these CRUD functions ///////////////////////////////////////
 
+//^define getNextUniqueIdPromise up here, var id = getNextUniqueIdPromise.then(return idString)
+
 exports.create = (text, callback) => {
-  var id = counter.getNextUniqueId();
-  items[id] = text;
-  callback(null, { id, text });
+
+  counter.getNextUniqueId((err,id) => { //promises?
+    // console.log("inside getNextUniqueID callback", id)
+    items[id] = text;
+    //use WriteFile
+    fs.writeFile(path.join(exports.dataDir, `${id}.txt`), text, (err)=> {
+      if(err){
+        throw ('Could not create new todo text file')
+      }else{
+        callback(null, { id, text });
+      }
+    })
+  });
+
+  //use writeFile
+  // console.log("outside callback", id);
+  //^ use idString as name to writeFile in /datastore/data that contains text
+// fs.writeFile(idString)
+
 };
 
 exports.readAll = (callback) => {
-  var data = _.map(items, (text, id) => {
-    return { id, text };
-  });
-  callback(null, data);
+  // fs.readFile
+
+  fs.readdir(exports.dataDir, (err,files)=>{
+    if(err){
+      throw ('could not read all the files')
+    } else{
+      var data = _.map(files,(fileName)=>{
+        let id= fileName.replace('.txt','')
+        return {'id': id, 'text': id}
+      })
+      callback(null, data);
+    }
+  })
+
+  // var data = _.map(items, (text, id) => {
+  // //^ fs.readdir(exports.dataDir, cb)
+  //   return { id, text };
+  // });
+  // callback(null, data);
 };
 
 exports.readOne = (id, callback) => {
-  var text = items[id];
-  if (!text) {
-    callback(new Error(`No item with id: ${id}`));
-  } else {
-    callback(null, { id, text });
-  }
+  // console.log(id)
+  // var text = items[id];
+  fs.readFile(path.join(exports.dataDir, `${id}.txt`), (err,fileData) => {
+    if (err) {
+      callback(new Error(`No item with id: ${id}`));
+    } else {
+      var text= fileData.toString()
+      callback(null, { id, text});
+    }
+  })
 };
 
 exports.update = (id, text, callback) => {
-  var item = items[id];
-  if (!item) {
-    callback(new Error(`No item with id: ${id}`));
-  } else {
-    items[id] = text;
-    callback(null, { id, text });
-  }
+  // console.log(id)
+  let filePath = path.join(exports.dataDir, `${id}.txt`);
+
+  fs.readFile( filePath, (err, fileData) => {
+    if (err) {
+      callback(new Error(`No item with id: ${id}`));
+    } else {
+      fs.writeFile( filePath, text, (err) => {
+        if(err){
+          throw ('could not write to file')
+        } else {
+          callback(null, { id, text });
+          items[id] = text;
+
+        }
+      })
+    }
+  })
+
+  // var item = items[id];
+  // if (!item) {
+  //   callback(new Error(`No item with id: ${id}`));
+  // } else {
+  // }
 };
 
 exports.delete = (id, callback) => {
-  var item = items[id];
-  delete items[id];
-  if (!item) {
-    // report an error if item not found
-    callback(new Error(`No item with id: ${id}`));
-  } else {
-    callback();
-  }
+  let filePath = path.join(exports.dataDir, `${id}.txt`);
+
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      callback(new Error(`No item with id: ${id}`));
+    } else {
+      callback();
+    }
+  })
+  // var item = items[id];
+  // delete items[id];
+  // if (!item) {
+  //   // report an error if item not found
+    // callback(new Error(`No item with id: ${id}`));
+  // } else {
+  //   callback();
+  // }
+
+  //use fs.unlink
 };
 
 // Config+Initialization code -- DO NOT MODIFY /////////////////////////////////
